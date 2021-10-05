@@ -4,6 +4,7 @@
 import cv2
 import pyautogui
 from time import sleep, time
+import numpy as np
 
 # No cooldown time
 pyautogui.PAUSE = 0
@@ -31,8 +32,10 @@ loop_time = time()
 while True:
     if x and y and w and h:
         # screenshot
-        pyautogui.screenshot("imgs/image.png", (x, y, w, h))
-        image = cv2.imread("imgs/image.png")
+        screenshot = pyautogui.screenshot(region=(x, y, w, h))
+        image = np.array(screenshot)
+        # Convert RGB to BGR
+        image = image[:, :, ::-1].copy()
 
         while True:
 
