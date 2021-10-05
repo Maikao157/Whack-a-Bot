@@ -9,6 +9,7 @@ import numpy as np
 # No cooldown time
 pyautogui.PAUSE = 0
 method = cv2.TM_CCOEFF_NORMED
+threshold = 0.8
 
 # template and dimensions
 template = cv2.imread("imgs/nose.png")
@@ -30,49 +31,32 @@ sleep(3)
 # main
 loop_time = time()
 while True:
+    # Check if the location of the pitch is found
     if x and y and w and h:
         # screenshot
         screenshot = pyautogui.screenshot(region=(x, y, w, h))
         image = np.array(screenshot)
         # Convert RGB to BGR
         image = image[:, :, ::-1].copy()
-
-        while True:
-
-            # show what the computer sees
-            image_mini = cv2.resize(
-                src=image, dsize=(450, 350)  # must be integer, not float
-            )
-            cv2.imshow("vision", image_mini)
-            cv2.waitKey(10)
-
-            image_gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
-
-            result = cv2.matchTemplate(
-                image=image_gray, templ=template_gray, method=method
-            )
-
-            min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(result)
-
-            # threshold
-            if max_val >= 0.8:
-                pyautogui.click(x=max_loc[0] + x, y=max_loc[1] + y)
-
-                image = cv2.rectangle(
-                    img=image,
-                    pt1=max_loc,
-                    pt2=(
-                        max_loc[0] + template_w,  # = pt2 x
-                        max_loc[1] + template_h,  # = pt2 y
-                    ),
-                    color=(0, 0, 255),
-                    thickness=-1,  # fill the rectangle
-                )
-
-            else:
-                break
-            print("FPS {}".format(1 / (time() - loop_time)))
-            loop_time = time()
+        image_gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
+        # Find noses
+        result = cv2.matchTemplate(image_gray, template_gray, method)
+        locations = np.where(result >= threshold)
+        locations = list(zip(*locations[::-1]))
+        rectangles = []
+        for loc in locations:
+            rect = [int(loc[0]), int(loc[1]), template_w, template_h]
+            rectangles.append(rect)
+            rectangles.append(rect)
+        # Remove duplicates in rectangles
+        rectangles, _ = cv2.groupRectangles(rectangles, eps=0.5, groupThreshold=1)
+        # Click on all detected noses
+        for (rx, ry, rw, rh) in rectangles:
+            center_x = rx + int(rw / 2)
+            center_y = ry + int(rh / 2)
+            pyautogui.click(x=x + center_x, y=y + center_y)
+        print("FPS {}".format(1 / (time() - loop_time)))
+        loop_time = time()
     else:
         # Find upper left and lower right corner
         upper_left_location = pyautogui.locateOnScreen(
