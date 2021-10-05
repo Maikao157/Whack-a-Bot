@@ -1,0 +1,2 @@
+opencv-python
+pyautogui==0.9.52
